@@ -16,18 +16,14 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef NSS_SOCKET_UTILS_H
-#define NSS_SOCKET_UTILS_H
+#ifndef NSS_RIGHTSCALE_UTILS_H
+#define NSS_RIGHTSCALE_UTILS_H
 
 #include <grp.h>
 #include <pwd.h>
 
-int check_security_passwd(const char*);
-
 enum nss_status open_passwd(int*, int*);
-enum nss_status write_getpwnam(int, const char*, int*);
 enum nss_status read_getpwnam(int, struct passwd*, char*, size_t, int*);
-enum nss_status write_getpwuid(int, uid_t, int*);
 enum nss_status read_getpwuid(int, struct passwd*, char*, size_t, int*);
 void close_passwd(int);
 

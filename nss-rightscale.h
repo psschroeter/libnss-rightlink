@@ -1,5 +1,5 @@
-#ifndef NSS_SOCKET_H
-#define NSS_SOCKET_H
+#ifndef NSS_RIGHTSCALE_H
+#define NSS_RIGHTSCALE_H
 
 #define _GNU_SOURCE
 
