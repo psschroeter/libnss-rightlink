@@ -155,8 +155,9 @@ enum nss_status _nss_rightscale_getpwuid_r(uid_t uid, struct passwd *pwbuf,
         free_passwd(entry);
     }
 
+    /* We've gotten to the end of file without finding anything */
     if (!found) {
-        /* We've gotten to the end of file without finding anything */
+        res = NSS_STATUS_NOTFOUND;
         *errnop = ENOENT;
     }
 
