@@ -25,7 +25,7 @@ enum nss_status _nss_rightscale_getspnam_r(const char* name, struct spwd *spbuf,
     int pw_length;
     const unsigned char* pw;
 
-    NSS_DEBUG("getspnam_r: looking for user %s (shadow)\n", name);
+    NSS_DEBUG("_nss_rightscale_getspnam_r: looking for user %s (shadow)\n", name);
 
     res = NSS_STATUS_UNAVAIL;
 
