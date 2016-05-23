@@ -7,7 +7,7 @@ ABOUT
 INSTALLATION
 ------------------
 1. Ubuntu
-sudo apt-get install build-essential autotools-dev autoconf libtool
+sudo apt-get install -y build-essential autotools-dev autoconf libtool
 ./bootstrap
 ./configure
 make

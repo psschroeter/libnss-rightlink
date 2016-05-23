@@ -21,11 +21,11 @@ static struct {
     /*  flag to know if NSS_TRYAGAIN
         was returned by previous call
         to getpwent_r */
-    int try_again;
+    //int try_again;
     int line_no;
     /* user information cache used if NSS_TRYAGAIN was returned */
-    struct passwd* entry;
-} pwent_data = { NULL, FALSE, 1, NULL};
+    //struct passwd* entry;
+} pwent_data = { NULL, 1 };
 
 /**
  * Setup everything needed to retrieve passwd entries.
@@ -68,28 +68,37 @@ enum nss_status _nss_rightscale_getpwent_r(struct passwd *pwbuf, char *buf,
         }
     }
 
-    if(pwent_data.try_again) {
-        res = fill_passwd(pwbuf, buf, buflen, pwent_data.entry, errnop);
-        /* buffer was long enough this time */
-        if(!(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE)) {
-            pwent_data.try_again = FALSE;
-            free_passwd(pwent_data.entry);
-            return res;
-        }
+    // if(pwent_data.try_again) {
+    //     res = fill_passwd(pwbuf, buf, buflen, pwent_data.entry, errnop);
+    //     /* buffer was long enough this time */
+    //     if(!(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE)) {
+    //         pwent_data.try_again = FALSE;
+    //         free_passwd(pwent_data.entry);
+    //         return res;
+    //     }
+    // }
+    int previous_line_no = pwent_data.line_no;
+    fpos_t previous_pos;
+    fgetpos(pwent_data.fp, &previous_pos);
+    struct passwd* entry;
+
+    entry = read_next_policy_entry(pwent_data.fp, &pwent_data.line_no);
+
+    if (entry == NULL) {
+        *errnop = ENOENT;
+        return NSS_STATUS_NOTFOUND;
     }
-    while (pwent_data.entry = read_next_policy_entry(pwent_data.fp, &pwent_data.line_no)) {
-        if (pwent_data.entry != NULL) {
-            res = fill_passwd(pwbuf, buf, buflen, pwent_data.entry, errnop);
-            if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
-                pwent_data.try_again = TRUE;
-            } else {
-                free_passwd(pwent_data.entry);
-            }
-            return res;
-        } else {
-            return NSS_STATUS_NOTFOUND;
-        }
-    }
+
+    res = fill_passwd(pwbuf, buf, buflen, entry, errnop);
+    free_passwd(entry);
+    // Rewind and re-read the current entry
+    if(res == NSS_STATUS_TRYAGAIN && (*errnop) == ERANGE) {
+        pwent_data.line_no = previous_line_no;
+        fsetpos(pwent_data.fp, &previous_pos);
+        //pwent_data.try_again = TRUE;
+    } 
+    return res;
+
 }
 
 /**
@@ -136,7 +145,7 @@ enum nss_status _nss_rightscale_getpwuid_r(uid_t uid, struct passwd *pwbuf,
     int res;
     struct passwd* entry;
 
-    NSS_DEBUG("rightscale getpwnam_r: Looking for uid %d\n", uid);
+    NSS_DEBUG("rightscale getpwuid_r: Looking for uid %d\n", uid);
 
     FILE *fp = open_policy_file();
     if (fp == NULL) {

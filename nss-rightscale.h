@@ -15,7 +15,8 @@
 
 /* Some syslog shortcuts */
 #ifdef DEBUG
-#define NSS_DEBUG(msg, ...) syslog(LOG_INFO, (msg), ## __VA_ARGS__)
+#define NSS_DEBUG(msg, ...) printf((msg), ## __VA_ARGS__)
+/* #define NSS_DEBUG(msg, ...) syslog(LOG_INFO, (msg), ## __VA_ARGS__) */
 #else
 #define NSS_DEBUG(msg, ...)
 #endif

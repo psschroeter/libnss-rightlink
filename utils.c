@@ -19,20 +19,21 @@
 
 /* This must be longer than any single line in the policy file */
 #define BUF_SIZE 4096
-static const char *POLICY_FILE = "/var/lib/rightscale/policy";
+static const char *POLICY_FILE = "/var/lib/rightlink/login_policy";
 
 FILE* open_policy_file()
 {
     /* Create input file descriptor */
     FILE* fp = fopen(POLICY_FILE, "r");
     if (fp == NULL) {
-        NSS_DEBUG("Cannot open policy file %s", POLICY_FILE);
+        NSS_DEBUG("Cannot open policy file %s\n", POLICY_FILE);
     }
     return fp;
 }
 
 /* Reads the next policy entry into the passed in struct.
  * Its up to the caller to free everything in the passwd struct.
+ * Valid policy entry line is "username:uid:gid:gecos:public_key1:public_key2:..."
  */ 
 struct passwd* read_next_policy_entry(FILE* fp, int* line_no) {
     char rawentry[BUF_SIZE];
@@ -101,12 +102,10 @@ void close_policy_file(FILE* fp) {
 /*
  * Fill an user struct using given information.
  * @param pwbuf Struct which will be filled with various info.
- * @param buf Buffer which will contain all strings pointed to by
- *      pwbuf.
+ * @param buf Buffer which will contain all strings pointed to by pwbuf.
  * @param buflen Buffer length.
  * @param entry Source struct populated from policy file.
- * @param errnop Pointer to errno, will be filled if something goes
- *      wrong.
+ * @param errnop Pointer to errno, will be filled if something goes wrong.
  */
 enum nss_status fill_passwd(struct passwd* pwbuf, char* buf, size_t buflen,
     struct passwd* entry, int* errnop) {
@@ -161,3 +160,73 @@ void free_passwd(struct passwd* entry) {
     free(entry->pw_dir);
     free(entry);
 }
+
+
+/*
+ * Fill an group struct using given information.
+ * @param grbuf Struct which will be filled with various info.
+ * @param buf Buffer which will contain all strings pointed to by grbuf.
+ * @param buflen Buffer length.
+ * @param entry Source struct populated from policy file.
+ * @param errnop Pointer to errno, will be filled if something goes wrong.
+ */
+enum nss_status fill_group(struct group* grbuf, char* buf, size_t buflen,
+    struct group* entry, int* errnop) {
+
+    int total_length = 0;
+
+    char **gr_memp = entry->gr_mem;
+
+    int i;
+    for (i = 0; gr_memp[i] != NULL; i++) {
+        total_length += strlen(gr_memp[i]) + 1;
+    }
+
+    int name_length = strlen(entry->gr_name);
+    total_length += name_length + 1;
+
+    int passwd_length = strlen(entry->gr_passwd);
+    total_length += passwd_length + 1;
+
+    /* Calculate number of extra bytes needed to align on pointer size boundry */
+    /* Should always be 0 */
+    int offset = 0;
+    if ((offset = (unsigned long)(buf) % sizeof(char*)) != 0)
+        offset = sizeof(char*) - offset;
+    total_length += offset;
+
+    // The pointers to group members are in buf also!. The array is null terminated, hence the + 1
+    total_length += sizeof(char *) * (i + 1);
+
+    if(buflen < total_length) {
+        *errnop = ERANGE;
+        return NSS_STATUS_TRYAGAIN;
+    }
+
+    grbuf->gr_gid = entry->gr_gid;
+
+    buf += offset;
+    grbuf->gr_mem = (char **)(buf);
+
+    buf +=  sizeof(char *) * (i + 1);
+
+    gr_memp = entry->gr_mem;
+    for (i = 0; gr_memp[i] != NULL; i++) {
+        strcpy(buf, gr_memp[i]);
+        grbuf->gr_mem[i] = buf;
+        buf += strlen(gr_memp[i]) + 1;
+    }
+    grbuf->gr_mem[i] = NULL; /* Null terminated list */
+
+
+    strcpy(buf, entry->gr_name);
+    grbuf->gr_name = buf;
+    buf += name_length + 1;
+
+    strcpy(buf, entry->gr_passwd);
+    grbuf->gr_passwd = buf;
+    buf += passwd_length + 1;
+
+    return NSS_STATUS_SUCCESS;
+}
+
